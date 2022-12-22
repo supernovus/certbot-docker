@@ -1,0 +1,96 @@
+#!/bin/bash
+
+declare -a DOPTS=(--rm --name certbot)
+CB_CONF="certbot-docker.conf"
+
+findCertDir() {
+  local -n DV="$1"
+  shift
+  for dirPath in "$@"; do
+    if [ -d "$dirPath" ]; then
+      DV="$dirPath"
+      [ -f "$dirPath/$CB_CONF" ] && . "$dirPath/$CB_CONF"
+      break   
+    fi
+  done
+}
+
+findCertDir CERTETC \
+  /etc/letsencrypt \
+  /etc/certbot \
+  /usr/local/etc/letsencrypt \
+  /usr/local/etc/certbot \
+  /opt/certbot/etc \
+  /opt/letsencrypt/etc
+
+if [ -z "$CERTVAR" ]; then
+  findCertDir CERTVAR \
+    /var/lib/letsencrypt \
+    /var/lib/certbot \
+    /opt/certbot/lib \
+    /opt/letsencrypt/lib
+fi
+
+show_usage () {
+  echo "usage: $0 [options...] commands..."
+  echo
+  echo "options:"
+  echo
+  echo "  --update   Update 'certbot' container."
+  echo "  -i         Run interactively."
+  echo "  -p <port>  Forward port (80 or 443) from container to host."
+  echo "  -w <path>  Map /var/www to the specified local path."
+  echo
+  echo "If using 'certonly' command, you MUST specify the -i option."
+  echo 
+  echo "Config:  $CERTETC"
+  echo "State:   $CERTVAR"
+  echo "Webroot: $WEBROOT"
+  echo
+  exit 1
+}
+
+[ "$1" = "--help" ] && show_usage
+
+RANUPDATE=0
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --update)
+      docker pull certbot/certbot
+      RANUPDATE=1
+      shift
+    ;;
+    -i)
+      DOPTS+=(-it)
+      shift
+    ;;
+    -p)
+      DOPTS+=(-p "$2:$2")
+      shift
+    ;;
+    -w)
+      WEBROOT="$2"
+      shift 2
+    ;;
+    *)
+      break
+    ;;
+  esac
+done
+
+if [ $# -lt 1 ]; then
+  if [ "$RANUPDATE" -eq 1 ]; then
+    exit 0
+  else
+    show_usage
+  fi
+fi
+
+[ -z "$CERTETC" ] && echo "no valid etc path" >&2 && exit 1
+DOPTS+=(-v "$CERTETC:/etc/letsencrypt")
+[ -n "$CERTVAR" ] && DOPTS+=(-v "$CERTVAR:/var/lib/letsencrypt")
+[ -n "$WEBROOT" ] && DOPTS+=(-v "$WEBROOT:/var/www")
+
+/usr/bin/docker run "${DOPTS[@]}" certbot/certbot "$@"
+
