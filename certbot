@@ -47,7 +47,7 @@ show_usage () {
   echo "Config:  $CERTETC"
   echo "State:   $CERTVAR"
   echo "Webroot: $WEBROOT"
-  echo "Options: $DOPTS"
+  echo "Options: ${DOPTS[@]}"
   echo "Version: $CBD_VER"
   echo
   exit 1
