@@ -1,5 +1,6 @@
 #!/bin/bash
 
+CBD_VER="24.10"
 declare -a DOPTS=(--rm --name certbot)
 CB_CONF="certbot-docker.conf"
 
@@ -46,6 +47,8 @@ show_usage () {
   echo "Config:  $CERTETC"
   echo "State:   $CERTVAR"
   echo "Webroot: $WEBROOT"
+  echo "Options: $DOPTS"
+  echo "Version: $CBD_VER"
   echo
   exit 1
 }
